@@ -1,0 +1,16 @@
+podcast:
+  title: "每日新闻"
+  subtitle: ""
+  author: "KMMoonlight"
+  email: "kmmoonlight@outlook.com"
+  link: "https://kmmoonlight.github.io/repo"
+  language: "zh-CN"
+  explicit: "no"
+  image: "https://github.com/kmmoonlight/repo/raw/main/cover.jpg"
+episodes:
+  - title: "2025-11-30"
+    file: "2025-11-30.mp3"
+    tag: "v1.0"
+    date: "2025-11-30"
+    duration: "05:03"
+    description: "2025/11/30 新闻"
