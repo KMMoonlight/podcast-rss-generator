@@ -12,16 +12,16 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout + 强制切换到 main 分支
+      - name: Checkout + 强制切换到 master 分支
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main                     # 强制 checkout 到 main 分支
+          ref: master                     # 强制 checkout 到 master 分支
 
-      - name: 再保险一次：确保在 main 分支上（永不 detached）
+      - name: 再保险一次：确保在 master 分支上（永不 detached）
         run: |
-          git checkout main || git checkout -b main
-          git pull origin main --ff-only
+          git checkout master || git checkout -b master
+          git pull origin master --ff-only
 
       - name: Install yq
         run: |
