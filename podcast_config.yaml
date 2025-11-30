@@ -1,16 +1,28 @@
-podcast:
+metadata:
   title: "每日新闻"
   subtitle: ""
   author: "KMMoonlight"
   email: "kmmoonlight@outlook.com"
-  link: "https://kmmoonlight.github.io/repo"
-  language: "zh-CN"
-  explicit: "no"
-  image: "https://github.com/kmmoonlight/repo/raw/main/cover.jpg"
+  description: ""
+  link: "https://kmmoonlight.github.io/podcast-rss-generator"
+  language: zh-CN
+  explicit: clean
+  copyright: "© 2025 KMMoonlight"
+  image: "https://github.com/kmmoonlight/podcast-rss-generator/raw/main/cover.jpg"
+  categories:
+    - "News"
+  owner:
+    name: "KMMoonlight"
+    email: "kmmoonlight@outlook.com"
+
 episodes:
   - title: "2025-11-30"
-    file: "2025-11-30.mp3"
-    tag: "v1.0"
-    date: "2025-11-30"
-    duration: "05:03"
     description: "2025/11/30 新闻"
+    date: 2025-11-30
+    file: "2025-11-30.mp3"
+    release_tag: "v1.0"
+    duration: "00:05:03"
+    explicit: false
+    season: 1
+    episode: 1
+    type: full
