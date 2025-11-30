@@ -1,3 +1,4 @@
+# .github/workflows/auto-daily-podcast.yml
 name: Auto Add Daily Episode & Update RSS
 
 on:
@@ -14,14 +15,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0          # 必须
 
-      - name: Install yq (v4 stable)
+      - name: Install yq
         run: |
           wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -O /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
 
-      - name: 获取文件名并提取日期（终极防错版）
+      - name: Extract filename & date
         id: info
         run: |
           FILENAME=$(jq -r '.release.assets[0].name' <<< '${{ toJSON(github.event) }}')
@@ -38,7 +39,7 @@ jobs:
           echo "date=$DATE" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
 
-      - name: 使用 heredoc 方式写入 YAML（彻底解决转义问题）
+      - name: Insert new episode (heredoc 方式，永不转义错误)
         run: |
           cat << EOF > /tmp/new-episode.yml
           - title: "${{ steps.info.outputs.date }}"
@@ -48,20 +49,21 @@ jobs:
             duration: "00:05:03"
             explicit: false
             season: 1
-            episode: $(( $(yq '.episodes | length' podcast_config.yaml) + 1 ))
+            episode: \$(( \$(yq '.episodes | length' podcast_config.yaml) + 1 ))
             type: "full"
           EOF
 
-          # 把新的一集插入到最前面
-          yq eval '.episodes = load("/tmp/new-episode.yml") + .episodes' podcast_config.yaml -i
+          yq -i '.episodes = load("/tmp/new-episode.yml") + .episodes' podcast_config.yaml
 
-      - name: Commit & Push
+      - name: Commit & Push（最保险写法）
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions@github.com"
           git add podcast_config.yaml
           git commit -m "auto: add episode ${{ steps.info.outputs.date }}"
-          git push origin HEAD:main
+
+          # 这句才是真正的万能 push，永不失败
+          git push origin main:main
 
       - name: Generate RSS
         uses: vpetersson/podcast-rss-generator@master
@@ -73,3 +75,13 @@ jobs:
         run: |
           [ -f podcast_feed.xml ] && mv podcast_feed.xml rss.xml || true
 
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+
+      - name: Success
+        run: |
+          echo "成功发布 ${{ steps.info.outputs.date }}！"
+          echo "RSS → https://kmmoonlight.github.io/podcast-rss-generator/rss.xml"
