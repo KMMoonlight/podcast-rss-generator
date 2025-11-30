@@ -8,36 +8,45 @@ jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
-      contents: write          # 关键权限
+      contents: write                  # 允许自动 commit
+
     steps:
-      - name: Checkout (full history + correct branch)
+      - name: Checkout (full history)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # 必须加这一行！否则 git push 找不到 branch
+          fetch-depth: 0                 # 必须，不然 push 失败
 
       - name: Install yq
         run: |
           wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O yq
           chmod +x yq
-          sudo mv yq /usr/local/bin/
+          sudo mv yq /usr/local/bin/yq
 
-      - name: Extract date & URL
+      - name: Extract filename and build info（完美防错版）
         id: info
         run: |
-          FILE=$(jq -r '.assets[0].name' <<< '${{ toJSON(github.event.release.assets) }}')
-          if [[ ! $FILE =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})\.mp3$ ]]; then
-            echo "文件名必须是 YYYY-MM-DD.mp3，当前是：$FILE"
+          # 直接从 release 事件里取第一个资产的名字（万无一失写法）
+          FILENAME=$(jq -r '.release.assets[0].name' <<< '${{ toJSON(github.event) }}')
+          TAG="${{ github.event.release.tag_name }}"
+
+          if [[ ! $FILENAME =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})\.mp3$ ]]; then
+            echo "错误：文件名必须是 YYYY-MM-DD.mp3，当前是：$FILENAME"
             exit 1
           fi
+
           DATE="${BASH_REMATCH[1]}"
-          TAG="${{ github.event.release.tag_name }}"
-          URL="https://github.com/${{ github.repository }}/releases/download/$TAG/$FILE"
+          URL="https://github.com/${{ github.repository }}/releases/download/$TAG/$FILENAME"
+
           echo "date=$DATE" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "filename=$FILENAME" >> $GITHUB_OUTPUT
 
-      - name: Insert new episode at the very top
+      - name: Insert new episode at top
         run: |
-          yq eval --inplace "
+          DATE="${{ steps.info.outputs.date }}"
+          URL="${{ steps.info.outputs.url }}"
+
+          yq -i "
             .episodes |= [
               {
                 title: \"$DATE\",
@@ -53,13 +62,13 @@ jobs:
             ] + .
           " podcast_config.yaml
 
-      - name: Git commit & push updated YAML
+      - name: Commit & push updated YAML
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions@github.com"
           git add podcast_config.yaml
-          git commit -m "auto: add episode $DATE"
-          git push origin HEAD:main   # 强制推到 main
+          git commit -m "auto: add daily episode ${{ steps.info.outputs.date }}"
+          git push origin HEAD:main
 
       - name: Generate RSS
         uses: vpetersson/podcast-rss-generator@master
@@ -67,10 +76,10 @@ jobs:
           input_file: podcast_config.yaml
           output_file: rss.xml
 
-      - name: Ensure rss.xml exists
+      - name: Rename output file if needed
         run: |
           [ -f podcast_feed.xml ] && mv podcast_feed.xml rss.xml || true
-          ls -la rss.xml || echo "rss.xml still missing!"
+          ls -la rss.xml
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -78,7 +87,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
 
-      - name: Done
+      - name: Success
         run: |
-          echo "新的一期 $DATE 已自动添加并发布！"
-          echo "RSS → https://kmmoonlight.github.io/podcast-rss-generator/rss.xml"
+          echo "每日新闻 ${{ steps.info.outputs.date }} 已自动发布！"
+          echo "RSS: https://kmmoonlight.github.io/podcast-rss-generator/rss.xml"
