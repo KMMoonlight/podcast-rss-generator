@@ -5,26 +5,28 @@ on:
     types: [published]
 
 jobs:
-  update-podcast:
+  update:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write          # 关键权限
     steps:
-      - name: Checkout
+      - name: Checkout (full history + correct branch)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 必须加这一行！否则 git push 找不到 branch
 
       - name: Install yq
         run: |
-          wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -O yq
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O yq
           chmod +x yq
           sudo mv yq /usr/local/bin/
 
-      - name: Extract date from uploaded file
+      - name: Extract date & URL
         id: info
         run: |
           FILE=$(jq -r '.assets[0].name' <<< '${{ toJSON(github.event.release.assets) }}')
           if [[ ! $FILE =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})\.mp3$ ]]; then
-            echo "错误：文件名必须是 YYYY-MM-DD.mp3"
+            echo "文件名必须是 YYYY-MM-DD.mp3，当前是：$FILE"
             exit 1
           fi
           DATE="${BASH_REMATCH[1]}"
@@ -33,15 +35,15 @@ jobs:
           echo "date=$DATE" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
 
-      - name: Add new episode (insert at top)
+      - name: Insert new episode at the very top
         run: |
           yq eval --inplace "
             .episodes |= [
               {
-                title: \"${{ steps.info.outputs.date }}\",
-                description: \"${{ steps.info.outputs.date }} 新闻\",
-                publication_date: \"${{ steps.info.outputs.date }}T02:30:00Z\",
-                asset_url: \"${{ steps.info.outputs.url }}\",
+                title: \"$DATE\",
+                description: \"$DATE 新闻\",
+                publication_date: \"$DATE\T02:30:00Z\",
+                asset_url: \"$URL\",
                 duration: \"00:05:03\",
                 explicit: false,
                 season: 1,
@@ -51,23 +53,24 @@ jobs:
             ] + .
           " podcast_config.yaml
 
-      - name: Commit updated YAML
+      - name: Git commit & push updated YAML
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions@github.com"
           git add podcast_config.yaml
-          git commit -m "auto: add episode ${{ steps.info.outputs.date }}"
-          git push
+          git commit -m "auto: add episode $DATE"
+          git push origin HEAD:main   # 强制推到 main
 
       - name: Generate RSS
-        uses: vpetersson/podcast-rss-generator@master   # 正确写法
+        uses: vpetersson/podcast-rss-generator@master
         with:
           input_file: podcast_config.yaml
           output_file: rss.xml
 
-      - name: Rename if needed
+      - name: Ensure rss.xml exists
         run: |
           [ -f podcast_feed.xml ] && mv podcast_feed.xml rss.xml || true
+          ls -la rss.xml || echo "rss.xml still missing!"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -75,5 +78,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
 
-      - name: Success
-        run: echo "新的一期已自动发布！RSS: https://kmmoonlight.github.io/podcast-rss-generator/rss.xml"
+      - name: Done
+        run: |
+          echo "新的一期 $DATE 已自动添加并发布！"
+          echo "RSS → https://kmmoonlight.github.io/podcast-rss-generator/rss.xml"
