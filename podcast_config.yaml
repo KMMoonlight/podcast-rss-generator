@@ -17,15 +17,6 @@ metadata:
     email: "kmmoonlight@outlook.com"
 episodes:
   - title: "2025-11-30"
-    description: "2025-11-30 新闻"
-    publication_date: "2025-11-30T02:30:00Z"
-    asset_url: "https://github.com/KMMoonlight/podcast-rss-generator/releases/download/v25_11_30_1/2025-11-30.mp3"
-    duration: "00:05:03"
-    explicit: false
-    season: 1
-    episode:
-    type: "full"
-  - title: "2025-11-30"
     description: "2025/11/30 新闻"
     date: 2025-11-30
     publication_date: "2025-11-30T02:30:00Z"
