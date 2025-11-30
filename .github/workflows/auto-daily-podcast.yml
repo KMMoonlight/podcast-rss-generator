@@ -28,34 +28,40 @@ jobs:
           wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -O /usr/local/bin/yq
           chmod +x /usr/local/bin/yq
 
-      - name: 提取文件名和日期
+      - name: 提取信息 + 计算 episode 编号
         id: info
         run: |
           FILENAME=$(jq -r '.release.assets[0].name' <<< '${{ toJSON(github.event) }}')
           TAG="${{ github.event.release.tag_name }}"
 
           if [[ ! $FILENAME =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})\.mp3$ ]]; then
-            echo "错误：文件名必须是 YYYY-MM-DD.mp3，当前是：$FILENAME"
+            echo "错误：文件名必须是 YYYY-MM-DD.mp3"
             exit 1
           fi
 
           DATE="${BASH_REMATCH[1]}"
           URL="https://github.com/${{ github.repository }}/releases/download/$TAG/$FILENAME"
+          NEXT_EPISODE=$(( $(yq '.episodes | length' podcast_config.yaml) + 1 ))
 
           echo "date=$DATE" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "episode=$NEXT_EPISODE" >> $GITHUB_OUTPUT   # 关键：纯数字
 
-      - name: 插入新的一集（heredoc 方式，永不转义出错）
+      - name: 插入新的一集（使用 env 方式，彻底解决变量替换问题）
+        env:
+          NEW_DATE: ${{ steps.info.outputs.date }}
+          NEW_URL: ${{ steps.info.outputs.url }}
+          NEW_EPISODE: ${{ steps.info.outputs.episode }}
         run: |
           cat << EOF > /tmp/new-episode.yml
-          - title: "${{ steps.info.outputs.date }}"
-            description: "${{ steps.info.outputs.date }} 新闻"
-            publication_date: "${{ steps.info.outputs.date }}T02:30:00Z"
-            asset_url: "${{ steps.info.outputs.url }}"
+          - title: "$NEW_DATE"
+            description: "$NEW_DATE 新闻"
+            publication_date: "${NEW_DATE}T02:30:00Z"
+            asset_url: "$NEW_URL"
             duration: "00:05:03"
             explicit: false
             season: 1
-            episode: ${{ steps.info.outputs.episode }}
+            episode: $NEW_EPISODE
             type: "full"
           EOF
 
