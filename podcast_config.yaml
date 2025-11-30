@@ -5,6 +5,7 @@ metadata:
   email: "kmmoonlight@outlook.com"
   description: "Daily News"
   link: "https://kmmoonlight.github.io/podcast-rss-generator"
+  rss_feed_url: "https://kmmoonlight.github.io/podcast-rss-generator/rss.xml"
   language: zh-CN
   explicit: false
   copyright: "© 2025 KMMoonlight"
