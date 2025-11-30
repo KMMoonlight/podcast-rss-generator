@@ -1,0 +1,16 @@
+name: Generate RSS
+on: [push, release]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vpetersson/podcast-rss-generator@master
+        with:
+          input_file: 'podcast_config.yaml'
+          output_file: 'rss.xml'
+      - name: Deploy to Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
