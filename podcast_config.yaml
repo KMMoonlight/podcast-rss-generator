@@ -3,10 +3,10 @@ metadata:
   subtitle: ""
   author: "KMMoonlight"
   email: "kmmoonlight@outlook.com"
-  description: ""
+  description: "Daily News"
   link: "https://kmmoonlight.github.io/podcast-rss-generator"
   language: zh-CN
-  explicit: clean
+  explicit: false
   copyright: "© 2025 KMMoonlight"
   image: "https://github.com/kmmoonlight/podcast-rss-generator/raw/main/cover.jpg"
   categories:
@@ -19,9 +19,9 @@ episodes:
   - title: "2025-11-30"
     description: "2025/11/30 新闻"
     date: 2025-11-30
-    file: "2025-11-30.mp3"
-    release_tag: "v1.0"
+    publication_date: 2025-11-30
     duration: "00:05:03"
+    asset_url: "https://github.com/kmmoonlight/podcast-rss-generator/releases/download/v1.0/2025-11-30.mp3"
     explicit: false
     season: 1
     episode: 1
