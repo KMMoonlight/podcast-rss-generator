@@ -8,24 +8,22 @@ jobs:
   update:
     runs-on: ubuntu-latest
     permissions:
-      contents: write                  # 允许自动 commit
+      contents: write
 
     steps:
-      - name: Checkout (full history)
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0                 # 必须，不然 push 失败
+          fetch-depth: 0
 
-      - name: Install yq
+      - name: Install yq (v4 stable)
         run: |
-          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O yq
-          chmod +x yq
-          sudo mv yq /usr/local/bin/yq
+          wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
 
-      - name: Extract filename and build info（完美防错版）
+      - name: 获取文件名并提取日期（终极防错版）
         id: info
         run: |
-          # 直接从 release 事件里取第一个资产的名字（万无一失写法）
           FILENAME=$(jq -r '.release.assets[0].name' <<< '${{ toJSON(github.event) }}')
           TAG="${{ github.event.release.tag_name }}"
 
@@ -39,35 +37,30 @@ jobs:
 
           echo "date=$DATE" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "filename=$FILENAME" >> $GITHUB_OUTPUT
 
-      - name: Insert new episode at top
+      - name: 使用 heredoc 方式写入 YAML（彻底解决转义问题）
         run: |
-          DATE="${{ steps.info.outputs.date }}"
-          URL="${{ steps.info.outputs.url }}"
+          cat << EOF > /tmp/new-episode.yml
+          - title: "${{ steps.info.outputs.date }}"
+            description: "${{ steps.info.outputs.date }} 新闻"
+            publication_date: "${{ steps.info.outputs.date }}T02:30:00Z"
+            asset_url: "${{ steps.info.outputs.url }}"
+            duration: "00:05:03"
+            explicit: false
+            season: 1
+            episode: $(( $(yq '.episodes | length' podcast_config.yaml) + 1 ))
+            type: "full"
+          EOF
 
-          yq -i "
-            .episodes |= [
-              {
-                title: \"$DATE\",
-                description: \"$DATE 新闻\",
-                publication_date: \"$DATE\T02:30:00Z\",
-                asset_url: \"$URL\",
-                duration: \"00:05:03\",
-                explicit: false,
-                season: 1,
-                episode: (.episodes | length) + 1,
-                type: \"full\"
-              }
-            ] + .
-          " podcast_config.yaml
+          # 把新的一集插入到最前面
+          yq eval '.episodes = load("/tmp/new-episode.yml") + .episodes' podcast_config.yaml -i
 
-      - name: Commit & push updated YAML
+      - name: Commit & Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions@github.com"
           git add podcast_config.yaml
-          git commit -m "auto: add daily episode ${{ steps.info.outputs.date }}"
+          git commit -m "auto: add episode ${{ steps.info.outputs.date }}"
           git push origin HEAD:main
 
       - name: Generate RSS
@@ -76,18 +69,7 @@ jobs:
           input_file: podcast_config.yaml
           output_file: rss.xml
 
-      - name: Rename output file if needed
+      - name: Rename if needed
         run: |
           [ -f podcast_feed.xml ] && mv podcast_feed.xml rss.xml || true
-          ls -la rss.xml
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-
-      - name: Success
-        run: |
-          echo "每日新闻 ${{ steps.info.outputs.date }} 已自动发布！"
-          echo "RSS: https://kmmoonlight.github.io/podcast-rss-generator/rss.xml"
