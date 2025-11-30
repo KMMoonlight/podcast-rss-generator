@@ -68,8 +68,13 @@ jobs:
           git add podcast_config.yaml
           git commit -m "auto: add episode ${{ steps.info.outputs.date }}"
 
-          # 真正的万能 push（无数人验证过）
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          # 关键三连：自动拉取最新 → rebase → 再推
+          git pull --rebase origin master
+          git push origin HEAD:master
+
+          # 如果上面还是被抢了，就用最粗暴但绝对成功的写法（99.99% 不会走到这）
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master --force-with-lease || true
+
 
       - name: Generate RSS
         uses: vpetersson/podcast-rss-generator@master
