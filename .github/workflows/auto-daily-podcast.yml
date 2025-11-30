@@ -55,7 +55,7 @@ jobs:
             duration: "00:05:03"
             explicit: false
             season: 1
-            episode: \$(( \$(yq '.episodes | length' podcast_config.yaml) + 1 ))
+            episode: ${{ steps.info.outputs.episode }}
             type: "full"
           EOF
 
