@@ -19,7 +19,7 @@ episodes:
   - title: "2025-11-30"
     description: "2025/11/30 新闻"
     date: 2025-11-30
-    publication_date: 2025-11-30
+    publication_date: "2025-11-30T02:30:00Z"
     duration: "00:05:03"
     asset_url: "https://github.com/kmmoonlight/podcast-rss-generator/releases/download/v1.0/2025-11-30.mp3"
     explicit: false
