@@ -21,6 +21,14 @@ jobs:
           chmod +x yq
           sudo mv yq /usr/local/bin/
 
+      - name: Install yamllint (for config validation)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yamllint
+
+      - name: Validate podcast_config.yaml
+        run: yamllint podcast_config.yaml
+
       - name: Extract info from latest release
         id: release
         run: |
@@ -61,7 +69,7 @@ jobs:
                 description: \"${{ steps.release.outputs.description }}\",
                 publication_date: \"${{ steps.release.outputs.date }}T02:30:00Z\",
                 asset_url: \"${{ steps.release.outputs.asset_url }}\",
-                duration: \"00:05:03\",           # 你可以后面再手动改时长
+                duration: \"00:05:03\",
                 explicit: false,
                 season: 1,
                 episode: ${{ steps.episode.outputs.number }},
@@ -79,10 +87,17 @@ jobs:
           git push
 
       - name: Generate RSS Feed
-        uses: vpetersson/podcast-rss-generator@v1
+        uses: vpetersson/podcast-rss-generator@master  # ← 关键修复：用 @master
         with:
           input_file: podcast_config.yaml
           output_file: rss.xml
+
+      - name: Ensure output is rss.xml (rename if needed)
+        run: |
+          if [ -f podcast_feed.xml ]; then
+            mv podcast_feed.xml rss.xml
+          fi
+          ls -la *.xml  # 日志确认文件
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
